@@ -2,16 +2,16 @@
 
 [![GitHub release](https://img.shields.io/github/v/release/conda-forge/miniforge?style=for-the-badge&sort=semver)](https://github.com/conda-forge/miniforge/releases)
 
-基于 GitHub Actions 构建 Miniforge3 RPM 安装包，支持 CentOS 7/8 多个平台。
+基于 GitHub Actions 构建 Miniforge3 RPM 安装包，支持 CentOS 7 / Rocky Linux 8 / ARM64 等平台。
 
 ## 支持的平台
 
 | Workflow | 触发名称 | 架构 | 目标系统 | 特点 |
 |-----------|----------|------|----------|------|
 | Build RPM Package | CentOS 7 | x86_64 | CentOS 7 | 指定版本 |
-| Build RPM Package (CentOS 8) | CentOS 8 | x86_64 | CentOS 8 | 指定版本 |
-| Build RPM Package (CentOS 8 ARM64) | CentOS 8 ARM64 | aarch64 | CentOS 8 ARM64 | 指定版本 |
-| Build RPM Package (Latest) | Latest | x86_64 | CentOS 8 | 自动获取最新版本 + 最新依赖 |
+| Build RPM Package (CentOS 8) | Rocky Linux 8 | x86_64 | Rocky Linux 8 | 指定版本 |
+| Build RPM Package (CentOS 8 ARM64) | Rocky Linux 8 ARM64 | aarch64 | Rocky Linux 8 ARM64 | 指定版本 |
+| Build RPM Package (Latest) | Latest | x86_64 | Rocky Linux 8 | 自动获取最新版本 + 最新依赖 |
 
 ## 安装目录
 
@@ -35,10 +35,10 @@
 # CentOS 7
 sudo rpm -ivh miniforge3-{version}-1.el7.x86_64.rpm
 
-# CentOS 8
+# Rocky Linux 8
 sudo rpm -ivh miniforge3-{version}-1.el8.x86_64.rpm
 
-# CentOS 8 ARM64
+# Rocky Linux 8 ARM64
 sudo rpm -ivh miniforge3-{version}-1.el8.aarch64.rpm
 ```
 

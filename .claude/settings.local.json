@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(mv build-rpm-centos8.yml build-rpm-rocky8.yml)",
+      "Bash(mv build-rpm-centos8-arm64.yml build-rpm-rocky8-arm64.yml)"
+    ]
+  }
+}

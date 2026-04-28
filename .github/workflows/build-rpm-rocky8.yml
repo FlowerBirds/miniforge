@@ -1,4 +1,4 @@
-name: Build RPM Package (CentOS 8)
+name: Build RPM Package (Rocky Linux 8)
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
 jobs:
   build-rpm:
     runs-on: ubuntu-latest
-    container: centos:8
+    container: rockylinux:8
 
     steps:
       - name: Checkout repository
@@ -88,10 +88,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: rpm-centos8-${{ inputs.miniforge_version }}
-          release_name: Miniforge3 RPM (CentOS 8) ${{ inputs.miniforge_version }}
+          release_name: Miniforge3 RPM (Rocky Linux 8) ${{ inputs.miniforge_version }}
           files: ~/rpmbuild/RPMS/**/*.rpm
           body: |
-            Miniforge3 RPM package built from version ${{ inputs.miniforge_version }} for CentOS 8
+            Miniforge3 RPM package built from version ${{ inputs.miniforge_version }} for Rocky Linux 8
 
             Installation:
             ```bash
