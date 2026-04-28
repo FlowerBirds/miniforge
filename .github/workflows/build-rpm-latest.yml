@@ -25,7 +25,7 @@ jobs:
 
       - name: Download Miniforge
         run: |
-          wget -q "https://github.com/conda-forge/miniforge/releases/download/${VERSION}/Miniforge3-${VERSION}-Linux-x86_64.sh" -O miniforge.sh
+          wget -q "https://github.com/conda-forge/miniforge/releases/download/${{ steps.version.outputs.version }}/Miniforge3-${{ steps.version.outputs.version }}-Linux-x86_64.sh" -O miniforge.sh
 
       - name: Install Miniforge
         run: |
