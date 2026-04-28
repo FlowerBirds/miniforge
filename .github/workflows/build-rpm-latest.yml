@@ -40,8 +40,8 @@ jobs:
 
       - name: Install latest Python dependencies
         run: |
-          /usr/local/miniforge3-latest/bin/pip install --upgrade pip
-          /usr/local/miniforge3-latest/bin/pip install -r requirements-latest.txt
+          /usr/local/miniforge3-latest/bin/pip install --upgrade pip setuptools wheel
+          /usr/local/miniforge3-latest/bin/pip install --no-build-isolation -r requirements-latest.txt
 
       - name: Prepare RPM build environment
         run: |
