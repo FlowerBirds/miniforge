@@ -1,0 +1,156 @@
+name: Build RPM Package (Latest)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    container: centos:8
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed
+
+      - name: Get latest Miniforge version
+        id: version
+        run: |
+          VERSION=$(curl -s "https://api.github.com/repos/conda-forge/miniforge/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "Miniforge3-\(.*\)",/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Downloading Miniforge version: $VERSION"
+
+      - name: Download Miniforge
+        run: |
+          wget -q "https://github.com/conda-forge/miniforge/releases/download/${VERSION}/Miniforge3-${VERSION}-Linux-x86_64.sh" -O miniforge.sh
+
+      - name: Install Miniforge
+        run: |
+          chmod +x miniforge.sh
+          ./miniforge.sh -b -p /usr/local/miniforge3-latest
+          rm miniforge.sh
+
+      - name: Verify installation
+        run: |
+          ls -la /usr/local/miniforge3-latest/
+          /usr/local/miniforge3-latest/bin/python --version
+
+      - name: Install latest Python dependencies
+        run: |
+          /usr/local/miniforge3-latest/bin/pip install --upgrade pip
+          /usr/local/miniforge3-latest/bin/pip install -r requirements-latest.txt
+
+      - name: Prepare RPM build environment
+        run: |
+          rpmdev-setuptree
+
+      - name: Copy Miniforge to RPM build root
+        run: |
+          mkdir -p ~/rpmbuild/SOURCES/miniforge3-latest-${{ steps.version.outputs.version }}
+          cp -r /usr/local/miniforge3-latest/* ~/rpmbuild/SOURCES/miniforge3-latest-${{ steps.version.outputs.version }}/
+
+      - name: Create spec file for latest
+        run: |
+          cat > ~/rpmbuild/SPECS/miniforge3-latest.spec << 'SPECEOF'
+%global version @VERSION@
+Name:           miniforge3-latest
+Version:        %{version}
+Release:        1%{?dist}
+Summary:        Miniforge3 (Latest) with latest Python packages
+License:        BSD-3-Clause
+URL:            https://github.com/conda-forge/miniforge
+Source0:        miniforge3-latest-%{version}.tar.gz
+
+%description
+Miniforge3 Latest is a minimal installer for conda-forge that provides
+the latest Python packages from requirements-latest.txt.
+
+%global __os_install_post /usr/lib/rpm/brp-compress %{nil}
+%global _bytecompile 0
+%global __debugedit %{nil}
+%global __python_bytecompile %{nil}
+%define __objdump /bin/true
+%define _without_check 1
+%define _binaries_in_noarch_packages_terminate_build 0
+%define _use_internal_dependency_generator 0
+%define debug_package %{nil}
+%define __find_requires %{nil}
+%define __find_provides %{nil}
+
+%prep
+mkdir -p miniforge3-latest-%{version}
+cd miniforge3-latest-%{version}
+
+%build
+# No compile needed
+
+%install
+rm -rf %{buildroot}
+mkdir -p %{buildroot}/usr/local/miniforge3-latest
+cp -r %{_builddir}/miniforge3-latest-%{version}/* %{buildroot}/usr/local/miniforge3-latest/
+
+%clean
+rm -rf %{buildroot}
+
+%files
+/usr/local/miniforge3-latest/*
+
+%post
+chmod -R 755 /usr/local/miniforge3-latest
+
+%changelog
+* Tue Apr 28 2026 Build <build@example.com> %{version}-1
+- Auto-built RPM with latest Python packages
+- Installed to /usr/local/miniforge3-latest
+SPECEOF
+
+      - name: Build RPM
+        run: |
+          rpmbuild -bb ~/rpmbuild/SPECS/miniforge3-latest.spec \
+            --define "_topdir /home/runner/rpmbuild" \
+            --define "version ${{ steps.version.outputs.version }}"
+
+      - name: List RPM files
+        run: |
+          find ~/rpmbuild -name "*.rpm" -type f
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: miniforge3-latest-rpm-${{ steps.version.outputs.version }}
+          path: ~/rpmbuild/RPMS/**/*.rpm
+          retention-days: 5
+
+      - name: Get token for release
+        id: get-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Upload to Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: rpm-latest-${{ steps.version.outputs.version }}
+          release_name: Miniforge3 RPM (Latest) ${{ steps.version.outputs.version }}
+          files: ~/rpmbuild/RPMS/**/*.rpm
+          body: |
+            Miniforge3 RPM with latest Python packages, built from version ${{ steps.version.outputs.version }}
+
+            Installation path: `/usr/local/miniforge3-latest`
+
+            Installation:
+            ```bash
+            sudo rpm -ivh miniforge3-latest-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
+            ```
+
+            Or install from local file:
+            ```bash
+            sudo dnf localinstall miniforge3-latest-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
+            ```
+        env:
+          GITHUB_TOKEN: ${{ steps.get-token.outputs.token }}

@@ -6,15 +6,17 @@
 
 ## 支持的平台
 
-| Workflow | 触发名称 | 架构 | 目标系统 |
-|-----------|----------|------|----------|
-| Build RPM Package | CentOS 7 | x86_64 | CentOS 7 |
-| Build RPM Package (CentOS 8) | CentOS 8 | x86_64 | CentOS 8 |
-| Build RPM Package (CentOS 8 ARM64) | CentOS 8 ARM64 | aarch64 | CentOS 8 ARM64 |
+| Workflow | 触发名称 | 架构 | 目标系统 | 特点 |
+|-----------|----------|------|----------|------|
+| Build RPM Package | CentOS 7 | x86_64 | CentOS 7 | 指定版本 |
+| Build RPM Package (CentOS 8) | CentOS 8 | x86_64 | CentOS 8 | 指定版本 |
+| Build RPM Package (CentOS 8 ARM64) | CentOS 8 ARM64 | aarch64 | CentOS 8 ARM64 | 指定版本 |
+| Build RPM Package (Latest) | Latest | x86_64 | CentOS 8 | 自动获取最新版本 + 最新依赖 |
 
 ## 安装目录
 
-所有平台统一安装到：`/usr/local/miniforge3`
+- 指定版本构建：`/usr/local/miniforge3`
+- Latest 构建：`/usr/local/miniforge3-latest`
 
 ## 使用方法
 
@@ -23,8 +25,9 @@
 1. 进入仓库 **Actions** 页面
 2. 选择对应的 Workflow
 3. 点击 **Run workflow**
-4. 输入 Miniforge 版本（如 `26.1.1-3`）
-5. 构建完成后 RPM 自动发布到 Release
+4. （指定版本 workflow）输入 Miniforge 版本（如 `26.1.1-3`）
+5. （Latest workflow）自动获取最新版本，无需手动输入
+6. 构建完成后 RPM 自动发布到 Release
 
 ### 2. 本地安装 RPM
 
@@ -51,7 +54,10 @@ sudo dnf localinstall miniforge3-{version}-1.el8.x86_64.rpm
 
 ## Python 依赖
 
-依赖列表在 `requirements.txt` 中，在打包前会预装到 Miniforge 环境中。
+| 文件 | 说明 |
+|------|------|
+| `requirements.txt` | 固定版本依赖（用于指定版本构建） |
+| `requirements-latest.txt` | 最新版本依赖（用于 Latest 构建） |
 
 ## 本地构建
 
