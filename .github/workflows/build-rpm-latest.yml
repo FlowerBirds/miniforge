@@ -88,44 +88,44 @@ jobs:
           path: /github/home/.rpmbuild/RPMS/**/*.rpm
           retention-days: 5
 
-      - name: Create release body file
+      - name: Create release body
         run: |
-          # Create package table
-          sed 's/==/|/g' requirements-latest.txt | while read line; do echo "| $line |"; done > /tmp/packages.md
+          MINIFORGE_VER=${{ steps.version.outputs.version }}
+          PYTHON_VER=${{ steps.python-info.outputs.python_version }}
 
-          # Create release body
-          cat > /tmp/release_body.md << 'RELEASEMARKER'
-Miniforge3 RPM with latest Python packages, built from version MINIFORGE_VER_PLACEHOLDER
+          # Build package table
+          echo '| Package | Version |' > /tmp/release_body.md
+          echo '|---------|---------|' >> /tmp/release_body.md
+          sed 's/==/|/g' requirements-latest.txt | while read line; do
+            echo "| $line |" >> /tmp/release_body.md
+          done
 
-## Environment
-- **Miniforge:** MINIFORGE_VER_PLACEHOLDER
-- **Python:** PYTHON_VER_PLACEHOLDER
-- **Installation:** `/usr/local/miniforge3`
+          # Prepend header
+          echo "Miniforge3 RPM with latest Python packages, built from version $MINIFORGE_VER" > /tmp/release_header.md
+          echo "" >> /tmp/release_header.md
+          echo "## Environment" >> /tmp/release_header.md
+          echo "- **Miniforge:** $MINIFORGE_VER" >> /tmp/release_header.md
+          echo "- **Python:** $PYTHON_VER" >> /tmp/release_header.md
+          echo "- **Installation:** \`/usr/local/miniforge3\`" >> /tmp/release_header.md
+          echo "" >> /tmp/release_header.md
+          echo "## Installed Packages" >> /tmp/release_header.md
+          echo "" >> /tmp/release_header.md
 
-## Installed Packages
+          cat /tmp/release_header.md /tmp/release_body.md > /tmp/release_full.md
 
-| Package | Version |
-|---------|---------|
-PACKAGES_PLACEHOLDER
+          echo "" >> /tmp/release_full.md
+          echo "## Installation" >> /tmp/release_full.md
+          echo "" >> /tmp/release_full.md
+          echo '```bash' >> /tmp/release_full.md
+          echo "sudo rpm -ivh miniforge3-$MINIFORGE_VER-1.el8.x86_64.rpm" >> /tmp/release_full.md
+          echo '```' >> /tmp/release_full.md
+          echo "" >> /tmp/release_full.md
+          echo "Or install from local file:" >> /tmp/release_full.md
+          echo '```bash' >> /tmp/release_full.md
+          echo "sudo dnf localinstall miniforge3-$MINIFORGE_VER-1.el8.x86_64.rpm" >> /tmp/release_full.md
+          echo '```' >> /tmp/release_full.md
 
-## Installation
-
-```bash
-sudo rpm -ivh miniforge3-MINIFORGE_VER_PLACEHOLDER-1.el8.x86_64.rpm
-```
-
-Or install from local file:
-```bash
-sudo dnf localinstall miniforge3-MINIFORGE_VER_PLACEHOLDER-1.el8.x86_64.rpm
-```
-RELEASEMARKER
-
-          sed -i "s/MINIFORGE_VER_PLACEHOLDER/${{ steps.version.outputs.version }}/g" /tmp/release_body.md
-          sed -i "s/PYTHON_VER_PLACEHOLDER/${{ steps.python-info.outputs.python_version }}/g" /tmp/release_body.md
-          sed -i "s|PACKAGES_PLACEHOLDER|$(cat /tmp/packages.md)|g" /tmp/release_body.md
-
-          echo "=== Release body ==="
-          cat /tmp/release_body.md
+          cat /tmp/release_full.md
 
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
@@ -136,4 +136,4 @@ RELEASEMARKER
           files: |
             /github/home/.rpmbuild/RPMS/**/*.rpm
             /github/home/.rpmbuild/SOURCES/*.tar.gz
-          body_path: /tmp/release_body.md
+          body_path: /tmp/release_full.md
