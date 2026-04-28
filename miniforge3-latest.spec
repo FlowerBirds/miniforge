@@ -33,7 +33,7 @@ cd miniforge3-%{version}
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/local/miniforge3
-cp -r %{_builddir}/miniforge3-%{version}/* %{buildroot}/usr/local/miniforge3/
+cp -r %{_sourcedir}/miniforge3-%{version}/* %{buildroot}/usr/local/miniforge3/
 
 %clean
 rm -rf %{buildroot}
