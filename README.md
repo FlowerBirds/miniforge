@@ -1,6 +1,6 @@
 # Miniforge3 RPM Builder
 
-> **Miniforge 最新版本：** `26.1.1-3`
+[![GitHub release](https://img.shields.io/github/v/release/conda-forge/miniforge?style=for-the-badge&sort=semver)](https://github.com/conda-forge/miniforge/releases)
 
 基于 GitHub Actions 构建 Miniforge3 RPM 安装包，支持 CentOS 7/8 多个平台。
 
