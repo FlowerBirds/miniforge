@@ -39,9 +39,14 @@ jobs:
         run: |
           /usr/local/miniforge3/bin/python --version
 
+      # - name: Install latest Python dependencies
+      #   run: |
+      #     /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
+      #     /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements-latest.txt
+
       - name: Get Python version
         run: |
-          /usr/local/miniforge3/bin/python --version 2>&1 | head -1 > /tmp/pyver.txt
+          /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > /tmp/pyver.txt
           PYVER=$(cat /tmp/pyver.txt)
           echo "python_version=$PYVER" >> $GITHUB_OUTPUT
 
@@ -92,10 +97,15 @@ jobs:
           /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > $PYVERFILE
           PYVER=$(cat $PYVERFILE)
 
+          # Get installed packages via pip freeze
+          /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
+
           # Create table
           echo '| Package | Version |' > /tmp/tbl.md
           echo '|---------|---------|' >> /tmp/tbl.md
-          grep -v '^#' requirements-latest.txt | grep -v '^$' | sed 's/$/|/;s/^/|/' | sed 's/==/|/g' >> /tmp/tbl.md
+          grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | sed 's/==/|/g' | while read line; do
+            echo "| $line |" >> /tmp/tbl.md
+          done
 
           # Build full release
           {
