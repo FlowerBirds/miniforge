@@ -39,16 +39,11 @@ jobs:
         run: |
           /usr/local/miniforge3/bin/python --version
 
-      # - name: Install latest Python dependencies
-      #   run: |
-      #     /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
-      #     /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements-latest.txt
-
       - name: Get Python version
-        id: python-info
         run: |
-          PYTHON_VERSION=$(/usr/local/miniforge3/bin/python --version)
-          echo "python_version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+          /usr/local/miniforge3/bin/python --version 2>&1 | head -1 > /tmp/pyver.txt
+          PYVER=$(cat /tmp/pyver.txt)
+          echo "python_version=$PYVER" >> $GITHUB_OUTPUT
 
       - name: Prepare RPM build environment
         run: |
@@ -90,42 +85,42 @@ jobs:
 
       - name: Create release body
         run: |
-          MINIFORGE_VER=${{ steps.version.outputs.version }}
-          PYTHON_VER=${{ steps.python-info.outputs.python_version }}
+          VERSION=${{ steps.version.outputs.version }}
 
-          # Build package table
-          echo '| Package | Version |' > /tmp/release_body.md
-          echo '|---------|---------|' >> /tmp/release_body.md
-          sed 's/==/|/g' requirements-latest.txt | while read line; do
-            echo "| $line |" >> /tmp/release_body.md
-          done
+          # Get Python version safely
+          PYVERFILE=/tmp/python_version.txt
+          /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > $PYVERFILE
+          PYVER=$(cat $PYVERFILE)
 
-          # Prepend header
-          echo "Miniforge3 RPM with latest Python packages, built from version $MINIFORGE_VER" > /tmp/release_header.md
-          echo "" >> /tmp/release_header.md
-          echo "## Environment" >> /tmp/release_header.md
-          echo "- **Miniforge:** $MINIFORGE_VER" >> /tmp/release_header.md
-          echo "- **Python:** $PYTHON_VER" >> /tmp/release_header.md
-          echo "- **Installation:** \`/usr/local/miniforge3\`" >> /tmp/release_header.md
-          echo "" >> /tmp/release_header.md
-          echo "## Installed Packages" >> /tmp/release_header.md
-          echo "" >> /tmp/release_header.md
+          # Create table
+          echo '| Package | Version |' > /tmp/tbl.md
+          echo '|---------|---------|' >> /tmp/tbl.md
+          grep -v '^#' requirements-latest.txt | grep -v '^$' | sed 's/$/|/;s/^/|/' | sed 's/==/|/g' >> /tmp/tbl.md
 
-          cat /tmp/release_header.md /tmp/release_body.md > /tmp/release_full.md
+          # Build full release
+          {
+            echo "# Miniforge3 RPM (Latest) $VERSION"
+            echo ""
+            echo "## Environment"
+            echo "- Miniforge: $VERSION"
+            echo "- Python: $PYVER"
+            echo "- Installation: /usr/local/miniforge3"
+            echo ""
+            echo "## Installed Packages"
+            echo ""
+            cat /tmp/tbl.md
+            echo ""
+            echo "## Installation"
+            echo '```'
+            echo "sudo rpm -ivh miniforge3-$VERSION-1.el8.x86_64.rpm"
+            echo '```'
+            echo ""
+            echo '```'
+            echo "sudo dnf localinstall miniforge3-$VERSION-1.el8.x86_64.rpm"
+            echo '```'
+          } > /tmp/release_body.txt
 
-          echo "" >> /tmp/release_full.md
-          echo "## Installation" >> /tmp/release_full.md
-          echo "" >> /tmp/release_full.md
-          echo '```bash' >> /tmp/release_full.md
-          echo "sudo rpm -ivh miniforge3-$MINIFORGE_VER-1.el8.x86_64.rpm" >> /tmp/release_full.md
-          echo '```' >> /tmp/release_full.md
-          echo "" >> /tmp/release_full.md
-          echo "Or install from local file:" >> /tmp/release_full.md
-          echo '```bash' >> /tmp/release_full.md
-          echo "sudo dnf localinstall miniforge3-$MINIFORGE_VER-1.el8.x86_64.rpm" >> /tmp/release_full.md
-          echo '```' >> /tmp/release_full.md
-
-          cat /tmp/release_full.md
+          cat /tmp/release_body.txt
 
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
@@ -136,4 +131,4 @@ jobs:
           files: |
             /github/home/.rpmbuild/RPMS/**/*.rpm
             /github/home/.rpmbuild/SOURCES/*.tar.gz
-          body_path: /tmp/release_full.md
+          body_path: /tmp/release_body.txt
