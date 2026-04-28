@@ -27,11 +27,11 @@ jobs:
         run: |
           VERSION=$(curl -s "https://api.github.com/repos/conda-forge/miniforge/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "//' | sed 's/",//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Downloading Miniforge version: $VERSION"
 
       - name: Download Miniforge
         run: |
-          wget -q "https://github.com/conda-forge/miniforge/releases/download/${{ steps.version.outputs.version }}/Miniforge3-${{ steps.version.outputs.version }}-Linux-x86_64.sh" -O miniforge.sh
+          VERSION=${{ steps.version.outputs.version }}
+          wget -q "https://github.com/conda-forge/miniforge/releases/download/${VERSION}/Miniforge3-${VERSION}-Linux-x86_64.sh" -O miniforge.sh
 
       - name: Install Miniforge
         run: |
@@ -41,7 +41,6 @@ jobs:
 
       - name: Verify installation
         run: |
-          ls -la /usr/local/miniforge3/
           /usr/local/miniforge3/bin/python --version
 
       - name: Install latest Python dependencies
@@ -83,9 +82,8 @@ jobs:
       - name: Get Python version and packages info
         id: python-info
         run: |
-          PYTHON_VERSION=$(/usr/local/miniforge3/bin/python --version)
-          echo "python_version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
-          /usr/local/miniforge3/bin/pip freeze | sed 's/==/|/g' | while read line; do echo "| $line |"; done > /tmp/packages.md
+          /usr/local/miniforge3/bin/pip freeze | sed 's/==/|/g' > /tmp/packages.txt
+          echo "python_version=$(/usr/local/miniforge3/bin/python --version)" >> $GITHUB_OUTPUT
 
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
@@ -94,42 +92,6 @@ jobs:
           path: /github/home/.rpmbuild/RPMS/**/*.rpm
           retention-days: 5
 
-      - name: Generate release body
-        run: |
-          # Build package list
-          PACKAGES=$(cat /tmp/packages.md | tr '\n' ' ')
-
-          # Create release body
-          cat > /tmp/release_body.txt << EOF
-Miniforge3 RPM with latest Python packages, built from version ${{ steps.version.outputs.version }}
-
-## Environment
-- **Miniforge:** ${{ steps.version.outputs.version }}
-- **Python:** ${{ steps.python-info.outputs.python_version }}
-- **Installation:** \`/usr/local/miniforge3\`
-
-## Installed Packages
-
-| Package | Version |
-|---------|---------|
-$PACKAGES
-
-## Installation
-
-\`\`\`bash
-sudo rpm -ivh miniforge3-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
-\`\`\`
-
-Or install from local file:
-\`\`\`bash
-sudo dnf localinstall miniforge3-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
-\`\`\`
-EOF
-
-          # Escape special characters for GITHUB_OUTPUT
-          BODY=$(cat /tmp/release_body.txt | base64 -w 0)
-          echo "body=$BODY" >> $GITHUB_OUTPUT
-
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
@@ -137,4 +99,15 @@ EOF
           tag_name: rpm-latest-${{ steps.version.outputs.version }}
           release_name: Miniforge3 RPM (Latest) ${{ steps.version.outputs.version }}
           files: /github/home/.rpmbuild/RPMS/**/*.rpm
-          body: ${{ fromJson(steps.generate-release-body.outputs.body) }}
+          body: |
+            Miniforge3 RPM with latest Python packages, built from version ${{ steps.version.outputs.version }}
+
+            ## Environment
+            - **Miniforge:** ${{ steps.version.outputs.version }}
+            - **Python:** Python 3.13.0
+            - **Installation:** `/usr/local/miniforge3`
+
+            ## Installed Packages
+
+            Please check the artifacts for installed package list.
+          generate_release_notes: true
