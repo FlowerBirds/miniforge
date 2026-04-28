@@ -25,9 +25,7 @@ with conda-forge channels and supports multiple CPU architectures.
 %define __find_provides %{nil}
 
 %prep
-# Setup source package
-mkdir -p miniforge3-%{version}
-cd miniforge3-%{version}
+%setup -q -n miniforge3
 
 %build
 # No compile needed
@@ -35,7 +33,7 @@ cd miniforge3-%{version}
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/local/miniforge3
-cp -r %{_builddir}/miniforge3-%{version}/* %{buildroot}/usr/local/miniforge3/
+cp -r %{_builddir}/miniforge3/* %{buildroot}/usr/local/miniforge3/
 
 %clean
 rm -rf %{buildroot}

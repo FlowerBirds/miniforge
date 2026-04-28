@@ -8,6 +8,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   build-rpm:
     runs-on: ubuntu-latest
@@ -40,49 +43,46 @@ jobs:
 
       - name: Install Python dependencies from requirements.txt
         run: |
-          /usr/local/miniforge3/bin/pip install -r requirements.txt
+          /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
+          /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements.txt
 
       - name: Prepare RPM build environment
         run: |
-          rpmdev-setuptree
+          mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
 
-      - name: Copy Miniforge to RPM build root
+      - name: Create source tarball
+        env:
+          MINIFORGE_VERSION: ${{ inputs.miniforge_version }}
         run: |
-          mkdir -p ~/rpmbuild/BUILDROOT
-          mkdir -p ~/rpmbuild/SOURCES/miniforge3-${{ inputs.miniforge_version }}
-          cp -r /usr/local/miniforge3/* ~/rpmbuild/SOURCES/miniforge3-${{ inputs.miniforge_version }}/
+          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
+          cd /usr/local
+          tar czf /github/home/.rpmbuild/SOURCES/miniforge3-${RPM_VERSION}.tar.gz miniforge3
 
-      - name: Update spec file with version
+      - name: Prepare spec file
+        env:
+          MINIFORGE_VERSION: ${{ inputs.miniforge_version }}
         run: |
-          sed -i 's/^Version:.*/Version:        ${{ inputs.miniforge_version }}/' miniforge3.spec
-
-      - name: Copy spec file
-        run: |
-          cp miniforge3.spec ~/rpmbuild/SPECS/
+          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
+          sed "s/@VERSION@/$RPM_VERSION/" miniforge3.spec > /github/home/.rpmbuild/SPECS/miniforge3.spec
 
       - name: Build RPM
+        env:
+          MINIFORGE_VERSION: ${{ inputs.miniforge_version }}
         run: |
-          rpmbuild -bb ~/rpmbuild/SPECS/miniforge3.spec \
-            --define "_topdir /home/runner/rpmbuild" \
-            --define "version ${{ inputs.miniforge_version }}"
+          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
+          TOPDIR=/github/home/.rpmbuild
+          rpmbuild -bb $TOPDIR/SPECS/miniforge3.spec --define "_topdir $TOPDIR"
 
       - name: List RPM files
         run: |
-          find ~/rpmbuild -name "*.rpm" -type f
+          find /github/home/.rpmbuild -name "*.rpm" -type f
 
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
           name: miniforge3-rpm-${{ inputs.miniforge_version }}
-          path: ~/rpmbuild/RPMS/**/*.rpm
+          path: /github/home/.rpmbuild/RPMS/**/*.rpm
           retention-days: 5
-
-      - name: Get token for release
-        id: get-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
@@ -90,18 +90,17 @@ jobs:
         with:
           tag_name: rpm-${{ inputs.miniforge_version }}
           release_name: Miniforge3 RPM ${{ inputs.miniforge_version }}
-          files: ~/rpmbuild/RPMS/**/*.rpm
+          files: /github/home/.rpmbuild/RPMS/**/*.rpm
           body: |
-            Miniforge3 RPM package built from version ${{ inputs.miniforge_version }}
+            Miniforge3 RPM package built from version ${{ inputs.miniforge_version }} for CentOS 7
 
-            Installation:
+            ## Installation
+
             ```bash
-            sudo rpm -ivh miniforge3-${{ inputs.miniforge_version }}-1.fc*.x86_64.rpm
+            sudo rpm -ivh miniforge3-${{ inputs.miniforge_version }}-1.el7.x86_64.rpm
             ```
 
             Or install from local file:
             ```bash
-            sudo dnf localinstall miniforge3-${{ inputs.miniforge_version }}-1.fc*.x86_64.rpm
+            sudo yum localinstall miniforge3-${{ inputs.miniforge_version }}-1.el7.x86_64.rpm
             ```
-        env:
-          GITHUB_TOKEN: ${{ steps.get-token.outputs.token }}
