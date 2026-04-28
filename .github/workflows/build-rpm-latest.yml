@@ -39,10 +39,10 @@ jobs:
         run: |
           /usr/local/miniforge3/bin/python --version
 
-      # - name: Install latest Python dependencies
-      #   run: |
-      #     /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
-      #     /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements-latest.txt
+      - name: Install latest Python dependencies
+        run: |
+          /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
+          /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements-latest.txt
 
       - name: Get Python version
         run: |
