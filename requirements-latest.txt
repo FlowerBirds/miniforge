@@ -3,7 +3,6 @@ certifi
 charset-normalizer
 click
 concurrent-log-handler
-cx-Oracle
 cycler
 DBUtils
 et-xmlfile
@@ -13,7 +12,6 @@ gunicorn
 idna
 importlib-metadata
 impyla
-interchange
 itsdangerous
 jieba
 Jinja2
@@ -28,12 +26,10 @@ packaging
 pandas
 pansi
 Pillow
-Pinyin2Hanzi
 portalocker
 presto-python-client
 psutil
 pure-sasl
-py2neo
 pybloom-mirror
 Pygments
 PyHive
@@ -60,3 +56,4 @@ pyecharts
 seaborn
 duckdb
 ipykernel
+oracledb
