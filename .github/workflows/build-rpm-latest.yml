@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   build-rpm:
@@ -15,12 +14,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Check user
-        run: |
-          whoami
-          echo "HOME=$HOME"
-          pwd
 
       - name: Install build dependencies
         run: |
@@ -34,8 +27,7 @@ jobs:
 
       - name: Download Miniforge
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          wget -q "https://github.com/conda-forge/miniforge/releases/download/${VERSION}/Miniforge3-${VERSION}-Linux-x86_64.sh" -O miniforge.sh
+          wget -q "https://github.com/conda-forge/miniforge/releases/download/${{ steps.version.outputs.version }}/Miniforge3-${{ steps.version.outputs.version }}-Linux-x86_64.sh" -O miniforge.sh
 
       - name: Install Miniforge
         run: |
@@ -51,6 +43,12 @@ jobs:
         run: |
           /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
           /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements-latest.txt
+
+      - name: Get Python version and packages info
+        id: python-info
+        run: |
+          /usr/local/miniforge3/bin/pip freeze | sed 's/==/|/g' > /tmp/packages.txt
+          echo "python_version=$(/usr/local/miniforge3/bin/python --version)" >> $GITHUB_OUTPUT
 
       - name: Prepare RPM build environment
         run: |
@@ -83,12 +81,6 @@ jobs:
         run: |
           find /github/home/.rpmbuild -name "*.rpm" -type f
 
-      - name: Get Python version and packages info
-        id: python-info
-        run: |
-          /usr/local/miniforge3/bin/pip freeze | sed 's/==/|/g' > /tmp/packages.txt
-          echo "python_version=$(/usr/local/miniforge3/bin/python --version)" >> $GITHUB_OUTPUT
-
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
@@ -110,10 +102,21 @@ jobs:
 
             ## Environment
             - **Miniforge:** ${{ steps.version.outputs.version }}
-            - **Python:** Python 3.13.0
+            - **Python:** ${{ steps.python-info.outputs.python_version }}
             - **Installation:** `/usr/local/miniforge3`
 
             ## Installed Packages
 
-            Please check the artifacts for installed package list.
+            Please check the release artifacts for the package list.
+
+            ## Installation
+
+            ```bash
+            sudo rpm -ivh miniforge3-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
+            ```
+
+            Or install from local file:
+            ```bash
+            sudo dnf localinstall miniforge3-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
+            ```
           generate_release_notes: true
