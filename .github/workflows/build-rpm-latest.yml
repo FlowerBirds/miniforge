@@ -19,7 +19,7 @@ jobs:
       - name: Get latest Miniforge version
         id: version
         run: |
-          VERSION=$(curl -s "https://api.github.com/repos/conda-forge/miniforge/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "Miniforge3-\(.*\)",/\1/')
+          VERSION=$(curl -s "https://api.github.com/repos/conda-forge/miniforge/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "//' | sed 's/",//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Downloading Miniforge version: $VERSION"
 
