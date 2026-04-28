@@ -51,8 +51,10 @@ jobs:
         env:
           MINIFORGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
+          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
           cd /usr/local
-          tar czf ~/rpmbuild/SOURCES/miniforge3-${MINIFORGE_VERSION}.tar.gz miniforge3
+          tar czf ~/rpmbuild/SOURCES/miniforge3-${RPM_VERSION}.tar.gz miniforge3
+          ls -la ~/rpmbuild/SOURCES/
 
       - name: Prepare spec file
         env:
