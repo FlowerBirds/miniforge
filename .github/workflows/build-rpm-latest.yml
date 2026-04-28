@@ -85,6 +85,16 @@ jobs:
         run: |
           find /github/home/.rpmbuild -name "*.rpm" -type f
 
+      - name: Get Python version and packages info
+        id: python-info
+        run: |
+          PYTHON_VERSION=$(/usr/local/miniforge3/bin/python --version)
+          echo "python_version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+          /usr/local/miniforge3/bin/pip freeze | sed 's/==/|/g' | while read line; do echo "| $line |"; done > /tmp/packages.md
+          echo "package_list<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/packages.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
@@ -102,9 +112,18 @@ jobs:
           body: |
             Miniforge3 RPM with latest Python packages, built from version ${{ steps.version.outputs.version }}
 
-            Installation path: `/usr/local/miniforge3`
+            ## Environment
+            - **Miniforge:** ${{ steps.version.outputs.version }}
+            - **Python:** ${{ steps.python-info.outputs.python_version }}
+            - **Installation:** `/usr/local/miniforge3`
 
-            Installation:
+            ## Installed Packages
+
+            | Package | Version |
+            |---------|---------|
+${{ steps.python-info.outputs.package_list }}
+            ## Installation
+
             ```bash
             sudo rpm -ivh miniforge3-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
             ```
