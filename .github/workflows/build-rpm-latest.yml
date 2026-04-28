@@ -49,13 +49,16 @@ jobs:
 
       - name: Copy Miniforge to RPM build root
         run: |
+          mkdir -p ~/rpmbuild/BUILDROOT
           mkdir -p ~/rpmbuild/SOURCES/miniforge3-latest-${{ steps.version.outputs.version }}
           cp -r /usr/local/miniforge3-latest/* ~/rpmbuild/SOURCES/miniforge3-latest-${{ steps.version.outputs.version }}/
 
       - name: Create spec file for latest
+        env:
+          MINIFORGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          cat > ~/rpmbuild/SPECS/miniforge3-latest.spec << 'SPECEOF'
-%global version @VERSION@
+          cat > ~/rpmbuild/SPECS/miniforge3-latest.spec << EOF
+%global version ${MINIFORGE_VERSION}
 Name:           miniforge3-latest
 Version:        %{version}
 Release:        1%{?dist}
@@ -105,13 +108,12 @@ chmod -R 755 /usr/local/miniforge3-latest
 * Tue Apr 28 2026 Build <build@example.com> %{version}-1
 - Auto-built RPM with latest Python packages
 - Installed to /usr/local/miniforge3-latest
-SPECEOF
+EOF
 
       - name: Build RPM
         run: |
           rpmbuild -bb ~/rpmbuild/SPECS/miniforge3-latest.spec \
-            --define "_topdir /home/runner/rpmbuild" \
-            --define "version ${{ steps.version.outputs.version }}"
+            --define "_topdir /home/runner/rpmbuild"
 
       - name: List RPM files
         run: |
