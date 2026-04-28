@@ -100,6 +100,9 @@ jobs:
           # Get installed packages via pip freeze
           /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
 
+          echo "=== pip freeze output ==="
+          cat /tmp/pip_freeze.txt
+
           # Create table - filter out @ file:// lines and keep only proper packages
           echo '| Package | Version |' > /tmp/tbl.md
           echo '|---------|---------|' >> /tmp/tbl.md
