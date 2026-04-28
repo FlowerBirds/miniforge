@@ -65,9 +65,15 @@ jobs:
           cat ~/rpmbuild/SPECS/miniforge3.spec
 
       - name: Build RPM
+        env:
+          MINIFORGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
+          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
+          ls -la ~/rpmbuild/SOURCES/
+          file ~/rpmbuild/SOURCES/miniforge3-${RPM_VERSION}.tar.gz
           rpmbuild -bb ~/rpmbuild/SPECS/miniforge3.spec \
-            --define "_topdir /home/runner/rpmbuild"
+            --define "_topdir /home/runner/rpmbuild" \
+            --define "version $RPM_VERSION"
 
       - name: List RPM files
         run: |
