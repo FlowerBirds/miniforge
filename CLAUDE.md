@@ -22,6 +22,8 @@ This repository builds Miniforge3 RPM packages with pre-installed Python depende
 - **Important:** When passing `--define "_topdir"` to rpmbuild, do NOT use `~`. Use absolute path instead (e.g., `/github/home/.rpmbuild`). The `~` tilde does not expand inside `--define` arguments.
 - **Version naming:** RPM Version field uses `_` instead of `-` (e.g., `26.1.1-3` → `26.1.1_3`)
 - **Spec files:** `miniforge3.spec` for versioned builds, `miniforge3-latest.spec` for Latest workflow
+- **Permissions:** All workflows require `permissions: contents: write` for release uploads
+- **Release body:** Latest workflow uses `body_path` to dynamically generate release content with package table
 - **Commit messages:** Must NOT include `Co-Authored-By` trailers
 
 ## Requirements Files
@@ -29,7 +31,7 @@ This repository builds Miniforge3 RPM packages with pre-installed Python depende
 | File | Purpose |
 |------|---------|
 | `requirements.txt` | Fixed versions for versioned builds |
-| `requirements-latest.txt` | Latest versions for Latest workflow |
+| `requirements-latest.txt` | Latest versions reference (Latest workflow uses pip freeze instead) |
 
 ## Local Build (if applicable)
 
