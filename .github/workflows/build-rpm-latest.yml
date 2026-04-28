@@ -100,11 +100,11 @@ jobs:
           # Get installed packages via pip freeze
           /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
 
-          # Create table
+          # Create table - filter out @ file:// lines and keep only proper packages
           echo '| Package | Version |' > /tmp/tbl.md
           echo '|---------|---------|' >> /tmp/tbl.md
-          grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | sed 's/==/|/g' | while read line; do
-            echo "| $line |" >> /tmp/tbl.md
+          grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | grep -v '@ file://' | grep '==' | while read line; do
+            echo "| $line |" | sed 's/==/|/g' >> /tmp/tbl.md
           done
 
           # Build full release
