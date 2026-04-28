@@ -47,11 +47,12 @@ jobs:
         run: |
           rpmdev-setuptree
 
-      - name: Copy Miniforge to RPM build root
+      - name: Create source tarball
+        env:
+          MINIFORGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          mkdir -p ~/rpmbuild/BUILDROOT
-          mkdir -p ~/rpmbuild/SOURCES/miniforge3-${{ steps.version.outputs.version }}
-          cp -r /usr/local/miniforge3/* ~/rpmbuild/SOURCES/miniforge3-${{ steps.version.outputs.version }}/
+          cd /usr/local
+          tar czf ~/rpmbuild/SOURCES/miniforge3-${MINIFORGE_VERSION}.tar.gz miniforge3
 
       - name: Prepare spec file
         env:
