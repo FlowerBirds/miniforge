@@ -90,12 +90,12 @@ jobs:
 
       - name: Create release body
         run: |
-          VERSION=${{ steps.version.outputs.version }}
+          VERSION="${{ steps.version.outputs.version }}"
 
           # Get Python version safely
           PYVERFILE=/tmp/python_version.txt
           /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > $PYVERFILE
-          PYVER=$(cat $PYVERFILE)
+          PYVER="$(cat $PYVERFILE)"
 
           # Get installed packages via pip freeze
           /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
