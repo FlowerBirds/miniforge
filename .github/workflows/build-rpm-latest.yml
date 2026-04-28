@@ -54,8 +54,11 @@ jobs:
           cp -r /usr/local/miniforge3/* ~/rpmbuild/SOURCES/miniforge3-${{ steps.version.outputs.version }}/
 
       - name: Prepare spec file
+        env:
+          MINIFORGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          sed 's/@VERSION@/${{ steps.version.outputs.version }}/' miniforge3-latest.spec > ~/rpmbuild/SPECS/miniforge3.spec
+          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
+          sed "s/@VERSION@/$RPM_VERSION/" miniforge3-latest.spec > ~/rpmbuild/SPECS/miniforge3.spec
           cat ~/rpmbuild/SPECS/miniforge3.spec
 
       - name: Build RPM
