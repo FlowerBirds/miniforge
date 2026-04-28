@@ -1,0 +1,106 @@
+name: Build RPM Package (CentOS 8)
+
+on:
+  workflow_dispatch:
+    inputs:
+      miniforge_version:
+        description: 'Miniforge version (e.g., 24.7.1-0)'
+        required: true
+        type: string
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    container: centos:8
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed
+
+      - name: Download Miniforge
+        run: |
+          MINIFORGE_VERSION=${{ inputs.miniforge_version }}
+          wget -q "https://github.com/conda-forge/miniforge/releases/download/${MINIFORGE_VERSION}/Miniforge3-${MINIFORGE_VERSION}-Linux-x86_64.sh" -O miniforge.sh
+
+      - name: Install Miniforge
+        run: |
+          chmod +x miniforge.sh
+          ./miniforge.sh -b -p /usr/local/miniforge3
+          rm miniforge.sh
+
+      - name: Verify installation
+        run: |
+          ls -la /usr/local/miniforge3/
+          /usr/local/miniforge3/bin/python --version
+
+      - name: Install Python dependencies from requirements.txt
+        run: |
+          /usr/local/miniforge3/bin/pip install -r requirements.txt
+
+      - name: Prepare RPM build environment
+        run: |
+          rpmdev-setuptree
+
+      - name: Copy Miniforge to RPM build root
+        run: |
+          mkdir -p ~/rpmbuild/BUILDROOT
+          mkdir -p ~/rpmbuild/SOURCES/miniforge3-${{ inputs.miniforge_version }}
+          cp -r /usr/local/miniforge3/* ~/rpmbuild/SOURCES/miniforge3-${{ inputs.miniforge_version }}/
+
+      - name: Update spec file with version
+        run: |
+          sed -i 's/^Version:.*/Version:        ${{ inputs.miniforge_version }}/' miniforge3.spec
+
+      - name: Copy spec file
+        run: |
+          cp miniforge3.spec ~/rpmbuild/SPECS/
+
+      - name: Build RPM
+        run: |
+          rpmbuild -bb ~/rpmbuild/SPECS/miniforge3.spec \
+            --define "_topdir /home/runner/rpmbuild" \
+            --define "version ${{ inputs.miniforge_version }}"
+
+      - name: List RPM files
+        run: |
+          find ~/rpmbuild -name "*.rpm" -type f
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: miniforge3-rpm-centos8-${{ inputs.miniforge_version }}
+          path: ~/rpmbuild/RPMS/**/*.rpm
+          retention-days: 5
+
+      - name: Get token for release
+        id: get-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Upload to Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: rpm-centos8-${{ inputs.miniforge_version }}
+          release_name: Miniforge3 RPM (CentOS 8) ${{ inputs.miniforge_version }}
+          files: ~/rpmbuild/RPMS/**/*.rpm
+          body: |
+            Miniforge3 RPM package built from version ${{ inputs.miniforge_version }} for CentOS 8
+
+            Installation:
+            ```bash
+            sudo rpm -ivh miniforge3-${{ inputs.miniforge_version }}-1.el8.x86_64.rpm
+            ```
+
+            Or install from local file:
+            ```bash
+            sudo dnf localinstall miniforge3-${{ inputs.miniforge_version }}-1.el8.x86_64.rpm
+            ```
+        env:
+          GITHUB_TOKEN: ${{ steps.get-token.outputs.token }}
