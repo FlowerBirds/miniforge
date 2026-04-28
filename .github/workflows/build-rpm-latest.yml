@@ -44,20 +44,11 @@ jobs:
       #     /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
       #     /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements-latest.txt
 
-      - name: Get Python version and packages info
+      - name: Get Python version
         id: python-info
         run: |
           PYTHON_VERSION=$(/usr/local/miniforge3/bin/python --version)
           echo "python_version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
-          # Copy packages list to artifact
-          sed 's/==/|/g' requirements-latest.txt > /tmp/packages.txt
-
-      - name: Upload packages list
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-list-${{ steps.version.outputs.version }}
-          path: /tmp/packages.txt
-          retention-days: 30
 
       - name: Prepare RPM build environment
         run: |
@@ -97,6 +88,45 @@ jobs:
           path: /github/home/.rpmbuild/RPMS/**/*.rpm
           retention-days: 5
 
+      - name: Create release body file
+        run: |
+          # Create package table
+          sed 's/==/|/g' requirements-latest.txt | while read line; do echo "| $line |"; done > /tmp/packages.md
+
+          # Create release body
+          cat > /tmp/release_body.md << 'RELEASEMARKER'
+Miniforge3 RPM with latest Python packages, built from version MINIFORGE_VER_PLACEHOLDER
+
+## Environment
+- **Miniforge:** MINIFORGE_VER_PLACEHOLDER
+- **Python:** PYTHON_VER_PLACEHOLDER
+- **Installation:** `/usr/local/miniforge3`
+
+## Installed Packages
+
+| Package | Version |
+|---------|---------|
+PACKAGES_PLACEHOLDER
+
+## Installation
+
+```bash
+sudo rpm -ivh miniforge3-MINIFORGE_VER_PLACEHOLDER-1.el8.x86_64.rpm
+```
+
+Or install from local file:
+```bash
+sudo dnf localinstall miniforge3-MINIFORGE_VER_PLACEHOLDER-1.el8.x86_64.rpm
+```
+RELEASEMARKER
+
+          sed -i "s/MINIFORGE_VER_PLACEHOLDER/${{ steps.version.outputs.version }}/g" /tmp/release_body.md
+          sed -i "s/PYTHON_VER_PLACEHOLDER/${{ steps.python-info.outputs.python_version }}/g" /tmp/release_body.md
+          sed -i "s|PACKAGES_PLACEHOLDER|$(cat /tmp/packages.md)|g" /tmp/release_body.md
+
+          echo "=== Release body ==="
+          cat /tmp/release_body.md
+
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
@@ -106,26 +136,4 @@ jobs:
           files: |
             /github/home/.rpmbuild/RPMS/**/*.rpm
             /github/home/.rpmbuild/SOURCES/*.tar.gz
-          body: |
-            Miniforge3 RPM with latest Python packages, built from version ${{ steps.version.outputs.version }}
-
-            ## Environment
-            - **Miniforge:** ${{ steps.version.outputs.version }}
-            - **Python:** ${{ steps.python-info.outputs.python_version }}
-            - **Installation:** `/usr/local/miniforge3`
-
-            ## Installed Packages
-
-            Please check the package-list artifact for the full package list.
-
-            ## Installation
-
-            ```bash
-            sudo rpm -ivh miniforge3-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
-            ```
-
-            Or install from local file:
-            ```bash
-            sudo dnf localinstall miniforge3-${{ steps.version.outputs.version }}-1.el8.x86_64.rpm
-            ```
-          generate_release_notes: true
+          body_path: /tmp/release_body.md
