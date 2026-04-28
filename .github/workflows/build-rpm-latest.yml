@@ -49,9 +49,15 @@ jobs:
         run: |
           PYTHON_VERSION=$(/usr/local/miniforge3/bin/python --version)
           echo "python_version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
-          # Read packages from requirements-latest.txt
-          sed 's/==/|/g' requirements-latest.txt | while read line; do echo "| $line |"; done > /tmp/packages.md
-          echo "package_list=$(cat /tmp/packages.md)" >> $GITHUB_OUTPUT
+          # Copy packages list to artifact
+          sed 's/==/|/g' requirements-latest.txt > /tmp/packages.txt
+
+      - name: Upload packages list
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-list-${{ steps.version.outputs.version }}
+          path: /tmp/packages.txt
+          retention-days: 30
 
       - name: Prepare RPM build environment
         run: |
@@ -110,9 +116,7 @@ jobs:
 
             ## Installed Packages
 
-            | Package | Version |
-            |---------|---------|
-            ${{ steps.python-info.outputs.package_list }}
+            Please check the package-list artifact for the full package list.
 
             ## Installation
 
