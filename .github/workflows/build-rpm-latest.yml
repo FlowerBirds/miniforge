@@ -53,60 +53,9 @@ jobs:
           mkdir -p ~/rpmbuild/SOURCES/miniforge3-${{ steps.version.outputs.version }}
           cp -r /usr/local/miniforge3/* ~/rpmbuild/SOURCES/miniforge3-${{ steps.version.outputs.version }}/
 
-      - name: Create spec file
-        env:
-          MINIFORGE_VERSION: ${{ steps.version.outputs.version }}
+      - name: Prepare spec file
         run: |
-          printf '%%global version %s\n' "$MINIFORGE_VERSION" > ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'Name:           miniforge3\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'Version:        %%{version}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'Release:        1%%{?dist}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'Summary:        Miniforge3 (Latest) with latest Python packages\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'License:        BSD-3-Clause\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'URL:            https://github.com/conda-forge/miniforge\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'Source0:        miniforge3-%%{version}.tar.gz\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%description\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'Miniforge3 Latest is a minimal installer for conda-forge that provides\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'the latest Python packages from requirements-latest.txt.\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%global __os_install_post /usr/lib/rpm/brp-compress %%{nil}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%global _bytecompile 0\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%global __debugedit %%{nil}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%global __python_bytecompile %%{nil}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%define __objdump /bin/true\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%define _without_check 1\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%define _binaries_in_noarch_packages_terminate_build 0\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%define _use_internal_dependency_generator 0\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%define debug_package %%{nil}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%define __find_requires %%{nil}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%define __find_provides %%{nil}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%prep\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'mkdir -p miniforge3-%%{version}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'cd miniforge3-%%{version}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%build\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '# No compile needed\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%install\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'rm -rf %%{buildroot}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'mkdir -p %%{buildroot}/usr/local/miniforge3\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'cp -r %%{_builddir}/miniforge3-%%{version}/* %%{buildroot}/usr/local/miniforge3/\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%clean\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'rm -rf %%{buildroot}\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%files\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '/usr/local/miniforge3/*\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%post\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf 'chmod -R 755 /usr/local/miniforge3\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '%%%%changelog\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '* Tue Apr 28 2026 Build <build@example.com> %%{version}-1\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '- Auto-built RPM with latest Python packages\n' >> ~/rpmbuild/SPECS/miniforge3.spec
-          printf '- Installed to /usr/local/miniforge3\n' >> ~/rpmbuild/SPECS/miniforge3.spec
+          sed 's/@VERSION@/${{ steps.version.outputs.version }}/' miniforge3-latest.spec > ~/rpmbuild/SPECS/miniforge3.spec
           cat ~/rpmbuild/SPECS/miniforge3.spec
 
       - name: Build RPM
