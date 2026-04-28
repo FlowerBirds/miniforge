@@ -39,16 +39,19 @@ jobs:
         run: |
           /usr/local/miniforge3/bin/python --version
 
-      - name: Install latest Python dependencies
-        run: |
-          /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
-          /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements-latest.txt
+      # - name: Install latest Python dependencies
+      #   run: |
+      #     /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
+      #     /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements-latest.txt
 
       - name: Get Python version and packages info
         id: python-info
         run: |
-          /usr/local/miniforge3/bin/pip freeze | sed 's/==/|/g' > /tmp/packages.txt
-          echo "python_version=$(/usr/local/miniforge3/bin/python --version)" >> $GITHUB_OUTPUT
+          PYTHON_VERSION=$(/usr/local/miniforge3/bin/python --version)
+          echo "python_version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+          # Read packages from requirements-latest.txt
+          sed 's/==/|/g' requirements-latest.txt | while read line; do echo "| $line |"; done > /tmp/packages.md
+          echo "package_list=$(cat /tmp/packages.md)" >> $GITHUB_OUTPUT
 
       - name: Prepare RPM build environment
         run: |
@@ -107,7 +110,9 @@ jobs:
 
             ## Installed Packages
 
-            Please check the release artifacts for the package list.
+            | Package | Version |
+            |---------|---------|
+            ${{ steps.python-info.outputs.package_list }}
 
             ## Installation
 
