@@ -15,8 +15,7 @@
 
 ## 安装目录
 
-- 指定版本构建：`/usr/local/miniforge3`
-- Latest 构建：`/usr/local/miniforge3-latest`
+所有构建统一安装到：`/usr/local/miniforge3`
 
 ## 使用方法
 
