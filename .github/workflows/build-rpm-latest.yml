@@ -3,6 +3,10 @@ name: Build RPM Package (Latest)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  releases: write
+
 jobs:
   build-rpm:
     runs-on: ubuntu-latest
@@ -110,3 +114,4 @@ jobs:
             ## Installed Packages
 
             Please check the artifacts for installed package list.
+          generate_release_notes: true
