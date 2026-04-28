@@ -12,6 +12,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check user
+        run: |
+          whoami
+          echo "HOME=$HOME"
+          pwd
+
       - name: Install build dependencies
         run: |
           dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed
