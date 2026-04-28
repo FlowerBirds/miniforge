@@ -4,50 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This repository builds an RPM package that installs Miniforge3 (conda-forge's minimal Python installer) with pre-installed Python dependencies. The package is target for **CentOS 7** compatibility.
+This repository builds Miniforge3 RPM packages with pre-installed Python dependencies. Four workflows target different platforms.
 
-## Repository Structure
+## Workflows
 
-- `.github/workflows/build-rpm.yml` - GitHub Actions workflow for RPM building
-- `miniforge3.spec` - RPM spec file, installs to `/usr/local/miniforge3`
-- `requirements.txt` - Python dependencies to install into the Miniforge environment
+| File | Trigger Name | Container | Target |
+|------|--------------|------------|--------|
+| `build-rpm.yml` | CentOS 7 | centos:7 | CentOS 7 x86_64 |
+| `build-rpm-rocky8.yml` | Rocky Linux 8 | rockylinux:8 | Rocky Linux 8 x86_64 |
+| `build-rpm-rocky8-arm64.yml` | Rocky Linux 8 ARM64 | rockylinux:8 | Rocky Linux 8 aarch64 |
+| `build-rpm-latest.yml` | Latest | rockylinux:8 | Rocky Linux 8, auto-latest miniforge |
 
-## Building RPM
+## Key Points
 
-### Manual Build (local)
+- **Installation path:** `/usr/local/miniforge3` for all workflows
+- **RPM build directory:** `/github/home/.rpmbuild` (GitHub Actions container)
+- **Important:** When passing `--define "_topdir"` to rpmbuild, do NOT use `~`. Use absolute path instead (e.g., `/github/home/.rpmbuild`). The `~` tilde does not expand inside `--define` arguments.
+- **Version naming:** RPM Version field uses `_` instead of `-` (e.g., `26.1.1-3` → `26.1.1_3`)
+- **Spec files:** `miniforge3.spec` for versioned builds, `miniforge3-latest.spec` for Latest workflow
+- **Commit messages:** Must NOT include `Co-Authored-By` trailers
+
+## Requirements Files
+
+| File | Purpose |
+|------|---------|
+| `requirements.txt` | Fixed versions for versioned builds |
+| `requirements-latest.txt` | Latest versions for Latest workflow |
+
+## Local Build (if applicable)
 
 ```bash
-# Install dependencies
-yum -y install rpm-build rpmdevtools tar gzip wget
-
-# Setup RPM build tree
-rpmdev-setuptree
-
-# Download and extract miniforge
-MINIFORGE_VERSION="24.7.1-0"
-wget "https://github.com/conda-forge/miniforge/releases/download/${MINIFORGE_VERSION}/Miniforge3-${MINIFORGE_VERSION}-Linux-x86_64.sh"
-bash Miniforge3-${MINIFORGE_VERSION}-Linux-x86_64.sh -b -p /usr/local/miniforge3
-
-# Install Python dependencies
-/usr/local/miniforge3/bin/pip install -r requirements.txt
-
-# Copy to RPM build root
-mkdir -p ~/rpmbuild/SOURCES/miniforge3-${MINIFORGE_VERSION}
-cp -r /usr/local/miniforge3/* ~/rpmbuild/SOURCES/miniforge3-${MINIFORGE_VERSION}/
+# Setup RPM build directory
+mkdir -p ~/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
 
 # Build RPM
-rpmbuild -bb miniforge3.spec --define "_topdir $HOME/rpmbuild" --define "version ${MINIFORGE_VERSION}"
+rpmbuild -bb miniforge3.spec --define "_topdir ~/.rpmbuild" --define "version 26.1.1_3"
 ```
-
-### GitHub Actions Build
-
-1. Go to Actions tab → "Build RPM Package" → "Run workflow"
-2. Enter `miniforge_version` (e.g., `24.7.1-0`)
-3. RPM is published to GitHub Release automatically
-
-## Notes
-
-- Build runs in `centos:7` container for CentOS 7 compatibility
-- Spec file uses `%{version}` macro - passed via `--define "version X"`
-- Python dependencies are installed into Miniforge **before** packaging
-- Commit messages must NOT include `Co-Authored-By` trailers
