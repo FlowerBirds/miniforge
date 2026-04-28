@@ -1,5 +1,7 @@
 # Miniforge3 RPM Builder
 
+> **Miniforge 最新版本：** `26.1.1-3`
+
 基于 GitHub Actions 构建 Miniforge3 RPM 安装包，支持 CentOS 7/8 多个平台。
 
 ## 支持的平台
@@ -21,7 +23,7 @@
 1. 进入仓库 **Actions** 页面
 2. 选择对应的 Workflow
 3. 点击 **Run workflow**
-4. 输入 Miniforge 版本（如 `24.7.1-0`）
+4. 输入 Miniforge 版本（如 `26.1.1-3`）
 5. 构建完成后 RPM 自动发布到 Release
 
 ### 2. 本地安装 RPM
@@ -58,7 +60,7 @@ sudo dnf localinstall miniforge3-{version}-1.el8.x86_64.rpm
 yum -y install rpm-build rpmdevtools tar gzip wget
 
 # 下载 Miniforge
-MINIFORGE_VERSION="24.7.1-0"
+MINIFORGE_VERSION="26.1.1-3"
 wget "https://github.com/conda-forge/miniforge/releases/download/${MINIFORGE_VERSION}/Miniforge3-${MINIFORGE_VERSION}-Linux-x86_64.sh"
 
 # 安装
