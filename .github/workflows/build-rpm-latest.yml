@@ -51,7 +51,7 @@ jobs:
 
       - name: Prepare RPM build environment
         run: |
-          mkdir -p ~/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
+          mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
 
       - name: Create source tarball
         env:
@@ -59,36 +59,37 @@ jobs:
         run: |
           RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
           cd /usr/local
-          tar czf ~/.rpmbuild/SOURCES/miniforge3-${RPM_VERSION}.tar.gz miniforge3
-          ls -la ~/.rpmbuild/SOURCES/
+          tar czf /github/home/.rpmbuild/SOURCES/miniforge3-${RPM_VERSION}.tar.gz miniforge3
+          ls -la /github/home/.rpmbuild/SOURCES/
 
       - name: Prepare spec file
         env:
           MINIFORGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
-          sed "s/@VERSION@/$RPM_VERSION/" miniforge3-latest.spec > ~/.rpmbuild/SPECS/miniforge3.spec
-          cat ~/.rpmbuild/SPECS/miniforge3.spec
+          sed "s/@VERSION@/$RPM_VERSION/" miniforge3-latest.spec > /github/home/.rpmbuild/SPECS/miniforge3.spec
+          cat /github/home/.rpmbuild/SPECS/miniforge3.spec
 
       - name: Build RPM
         env:
           MINIFORGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
-          ls -la ~/.rpmbuild/SOURCES/
-          file ~/.rpmbuild/SOURCES/miniforge3-${RPM_VERSION}.tar.gz
-          rpmbuild -bb ~/.rpmbuild/SPECS/miniforge3.spec \
-            --define "_topdir ~/.rpmbuild"
+          TOPDIR=/github/home/.rpmbuild
+          ls -la $TOPDIR/SOURCES/
+          file $TOPDIR/SOURCES/miniforge3-${RPM_VERSION}.tar.gz
+          rpmbuild -bb $TOPDIR/SPECS/miniforge3.spec \
+            --define "_topdir $TOPDIR"
 
       - name: List RPM files
         run: |
-          find ~/.rpmbuild -name "*.rpm" -type f
+          find /github/home/.rpmbuild -name "*.rpm" -type f
 
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
           name: miniforge3-rpm-${{ steps.version.outputs.version }}
-          path: ~/.rpmbuild/RPMS/**/*.rpm
+          path: /github/home/.rpmbuild/RPMS/**/*.rpm
           retention-days: 5
 
       - name: Get token for release
