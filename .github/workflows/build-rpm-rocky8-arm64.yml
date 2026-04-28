@@ -131,5 +131,7 @@ RELEASE_EOF
         with:
           tag_name: rpm-rocky8-arm64-${{ inputs.miniforge_version }}
           release_name: Miniforge3 RPM (Rocky Linux 8 ARM64) ${{ inputs.miniforge_version }}
-          files: /github/home/.rpmbuild/RPMS/**/*.rpm
+          files: |
+            /github/home/.rpmbuild/RPMS/**/*.rpm
+            /github/home/.rpmbuild/SOURCES/*.tar.gz
           body: ${{ fromJson(steps.generate-release-body.outputs.body) }}
