@@ -5,7 +5,7 @@ on:
 
 permissions:
   contents: write
-  releases: write
+  actions: write
 
 jobs:
   build-rpm:
