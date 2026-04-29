@@ -22,7 +22,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed gcc make
+          dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed gcc gcc-c++ make
 
       - name: Download Miniforge
         run: |
