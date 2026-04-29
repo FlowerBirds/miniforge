@@ -51,7 +51,9 @@ jobs:
               /usr/local/miniforge3/bin/python --version
 
               # Install Python dependencies from requirements.txt
+              # Install numpy first (required by matplotlib and other packages)
               /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
+              /usr/local/miniforge3/bin/pip install numpy
               /usr/local/miniforge3/bin/pip install --no-build-isolation -r /miniforge/requirements.txt
 
               # Get Python version
