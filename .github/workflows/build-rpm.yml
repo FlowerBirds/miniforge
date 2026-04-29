@@ -21,15 +21,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build RPM
+      - name: Build RPM in Docker
         run: |
+          mkdir -p /tmp/rpmbuild/{RPMS,SOURCES}
+
           docker run \
+            -v /tmp/rpmbuild:/output \
             -v.:/miniforge \
             -e MINIFORGE_VERSION=${{ inputs.miniforge_version }} \
             ${{ env.MANYLINUX_IMAGE }} \
             bash -c "
               set -e
-              cat /etc/os-release
 
               # Replace CentOS 7 repositories with archived mirrors (EOL fix)
               sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-*
@@ -51,12 +53,11 @@ jobs:
               /usr/local/miniforge3/bin/python --version
 
               # Install Python dependencies from requirements.txt
-              # Use --prefer-binary to avoid source builds that require numpy during matplotlib build
               /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
               /usr/local/miniforge3/bin/pip install --prefer-binary -r /miniforge/requirements.txt
 
               # Get Python version
-              /usr/local/miniforge3/bin/python -c \"import sys; print(sys.version.split()[0])\" > /tmp/pyver.txt
+              PYVER=\$(/usr/local/miniforge3/bin/python -c \"import sys; print(sys.version.split()[0])\")
 
               # Prepare RPM build environment
               mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
@@ -73,19 +74,21 @@ jobs:
               TOPDIR=/github/home/.rpmbuild
               rpmbuild -bb \$TOPDIR/SPECS/miniforge3.spec --define \"_topdir \$TOPDIR\"
 
-              # List RPM files
-              find /github/home/.rpmbuild -name \"*.rpm\" -type f
+              # Copy RPM files to output
+              cp /github/home/.rpmbuild/RPMS/x86_64/*.rpm /output/RPMS/
+              cp /github/home/.rpmbuild/SOURCES/*.tar.gz /output/SOURCES/
 
-              # Create release body
-              PYVER=\$(cat /tmp/pyver.txt)
+              # Get installed packages via pip freeze
               /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
 
+              # Create table
               echo '| Package | Version |' > /tmp/tbl.md
               echo '|---------|---------|' >> /tmp/tbl.md
               grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | grep -v '@ file://' | grep '==' | while read line; do
                 echo \"| \$line |\" | sed 's/==/|/g' >> /tmp/tbl.md
               done
 
+              # Build release body
               {
                 echo \"# Miniforge3 RPM \${MINIFORGE_VERSION}\"
                 echo \"\"
@@ -100,19 +103,16 @@ jobs:
                 cat /tmp/tbl.md
                 echo \"\"
                 echo \"## Installation\"
-                echo '\`\`\`'\"
+                echo \"\\\`\\\`\\\`\"
                 echo \"sudo rpm -ivh miniforge3-\${RPM_VERSION}-1.el7.x86_64.rpm\"
-                echo '\`\`\`'\"
+                echo \"\\\`\\\`\\\`\"
                 echo \"\"
-                echo '\`\`\`'\"
+                echo \"\\\`\\\`\\\`\"
                 echo \"sudo yum localinstall miniforge3-\${RPM_VERSION}-1.el7.x86_64.rpm\"
-                echo '\`\`\`'\"
+                echo \"\\\`\\\`\\\`\"
               } > /tmp/release_body.txt
 
-              # Upload to Release
-              cd /github/home/.rpmbuild
-              echo \"Upload files:\"
-              ls -la RPMS/**/*.rpm SOURCES/*.tar.gz
+              cp /tmp/release_body.txt /output/release_body.txt
             "
 
       - name: Upload to Release
@@ -122,6 +122,6 @@ jobs:
           tag_name: rpm-${{ inputs.miniforge_version }}
           release_name: Miniforge3 RPM ${{ inputs.miniforge_version }}
           files: |
-            /github/home/.rpmbuild/RPMS/**/*.rpm
-            /github/home/.rpmbuild/SOURCES/*.tar.gz
-          body_path: /tmp/release_body.txt
+            /tmp/rpmbuild/RPMS/*.rpm
+            /tmp/rpmbuild/SOURCES/*.tar.gz
+          body_path: /tmp/rpmbuild/release_body.txt
