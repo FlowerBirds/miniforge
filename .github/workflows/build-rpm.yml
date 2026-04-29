@@ -14,10 +14,8 @@ permissions:
 jobs:
   build-rpm:
     runs-on: ubuntu-latest
-    env:
-      MANYLINUX_IMAGE: quay.io/pypa/manylinux2014_x86_64
     container:
-      image: ${{ env.MANYLINUX_IMAGE }}
+      image: quay.io/pypa/manylinux2014_x86_64
 
     steps:
       - name: Checkout repository
