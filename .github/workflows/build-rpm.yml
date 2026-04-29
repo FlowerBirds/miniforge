@@ -14,116 +14,105 @@ permissions:
 jobs:
   build-rpm:
     runs-on: ubuntu-latest
-    container:
-      image: quay.io/pypa/manylinux2014_x86_64
+    env:
+      MANYLINUX_IMAGE: quay.io/pypa/manylinux2014_x86_64
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Install build dependencies
-        run: |
-          yum -y install epel-release
-          yum -y install rpm-build rpmdevtools tar gzip wget which sed
-
-      - name: Download Miniforge
-        run: |
-          MINIFORGE_VERSION=${{ inputs.miniforge_version }}
-          wget -q "https://github.com/conda-forge/miniforge/releases/download/${MINIFORGE_VERSION}/Miniforge3-${MINIFORGE_VERSION}-Linux-x86_64.sh" -O miniforge.sh
-
-      - name: Install Miniforge
-        run: |
-          chmod +x miniforge.sh
-          ./miniforge.sh -b -p /usr/local/miniforge3
-          rm miniforge.sh
-
-      - name: Verify installation
-        run: |
-          /usr/local/miniforge3/bin/python --version
-
-      - name: Install Python dependencies from requirements.txt
-        run: |
-          /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
-          /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements.txt
-
-      - name: Get Python version
-        run: |
-          /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > /tmp/pyver.txt
-
-      - name: Prepare RPM build environment
-        run: |
-          mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
-
-      - name: Create source tarball
-        env:
-          MINIFORGE_VERSION: ${{ inputs.miniforge_version }}
-        run: |
-          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
-          cd /usr/local
-          tar czf /github/home/.rpmbuild/SOURCES/miniforge3-${RPM_VERSION}.tar.gz miniforge3
-
-      - name: Prepare spec file
-        env:
-          MINIFORGE_VERSION: ${{ inputs.miniforge_version }}
-        run: |
-          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
-          sed "s/@VERSION@/$RPM_VERSION/" miniforge3.spec > /github/home/.rpmbuild/SPECS/miniforge3.spec
+        uses: actions/checkout@v4
 
       - name: Build RPM
-        env:
-          MINIFORGE_VERSION: ${{ inputs.miniforge_version }}
         run: |
-          RPM_VERSION=$(echo "$MINIFORGE_VERSION" | tr '-' '_')
-          TOPDIR=/github/home/.rpmbuild
-          rpmbuild -bb $TOPDIR/SPECS/miniforge3.spec --define "_topdir $TOPDIR"
+          docker run \
+            -v.:/miniforge \
+            -e MINIFORGE_VERSION=${{ inputs.miniforge_version }} \
+            ${{ env.MANYLINUX_IMAGE }} \
+            bash -c "
+              set -e
+              cat /etc/os-release
 
-      - name: List RPM files
-        run: |
-          find /github/home/.rpmbuild -name "*.rpm" -type f
+              # Replace CentOS 7 repositories with archived mirrors (EOL fix)
+              sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-*
+              sed -i 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
 
-      - name: Create release body
-        run: |
-          VERSION="${{ inputs.miniforge_version }}"
-          RPM_VERSION=$(echo "$VERSION" | tr '-' '_')
+              # Install build dependencies
+              yum -y install epel-release
+              yum -y install rpm-build rpmdevtools tar gzip wget which sed
 
-          # Get Python version
-          PYVERFILE=/tmp/python_version.txt
-          /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > $PYVERFILE
-          PYVER="$(cat $PYVERFILE)"
+              # Download Miniforge
+              wget -q \"https://github.com/conda-forge/miniforge/releases/download/\${MINIFORGE_VERSION}/Miniforge3-\${MINIFORGE_VERSION}-Linux-x86_64.sh\" -O miniforge.sh
 
-          # Get installed packages via pip freeze
-          /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
+              # Install Miniforge
+              chmod +x miniforge.sh
+              ./miniforge.sh -b -p /usr/local/miniforge3
+              rm miniforge.sh
 
-          # Create table - filter out @ file:// lines and keep only proper packages
-          echo '| Package | Version |' > /tmp/tbl.md
-          echo '|---------|---------|' >> /tmp/tbl.md
-          grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | grep -v '@ file://' | grep '==' | while read line; do
-            echo "| $line |" | sed 's/==/|/g' >> /tmp/tbl.md
-          done
+              # Verify installation
+              /usr/local/miniforge3/bin/python --version
 
-          # Build full release
-          {
-            echo "# Miniforge3 RPM $VERSION"
-            echo ""
-            echo "## Environment"
-            echo "- Miniforge: $VERSION"
-            echo "- Python: $PYVER"
-            echo "- Installation: /usr/local/miniforge3"
-            echo "- Platform: CentOS 7 (glibc 2.17)"
-            echo ""
-            echo "## Installed Packages"
-            echo ""
-            cat /tmp/tbl.md
-            echo ""
-            echo "## Installation"
-            echo '```'
-            echo "sudo rpm -ivh miniforge3-${RPM_VERSION}-1.el7.x86_64.rpm"
-            echo '```'
-            echo ""
-            echo '```'
-            echo "sudo yum localinstall miniforge3-${RPM_VERSION}-1.el7.x86_64.rpm"
-            echo '```'
-          } > /tmp/release_body.txt
+              # Install Python dependencies from requirements.txt
+              /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
+              /usr/local/miniforge3/bin/pip install --no-build-isolation -r /miniforge/requirements.txt
+
+              # Get Python version
+              /usr/local/miniforge3/bin/python -c \"import sys; print(sys.version.split()[0])\" > /tmp/pyver.txt
+
+              # Prepare RPM build environment
+              mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
+
+              # Create source tarball
+              RPM_VERSION=\$(echo \"\${MINIFORGE_VERSION}\" | tr '-' '_')
+              cd /usr/local
+              tar czf /github/home/.rpmbuild/SOURCES/miniforge3-\${RPM_VERSION}.tar.gz miniforge3
+
+              # Prepare spec file
+              sed \"s/@VERSION@/\${RPM_VERSION}/\" /miniforge/miniforge3.spec > /github/home/.rpmbuild/SPECS/miniforge3.spec
+
+              # Build RPM
+              TOPDIR=/github/home/.rpmbuild
+              rpmbuild -bb \$TOPDIR/SPECS/miniforge3.spec --define \"_topdir \$TOPDIR\"
+
+              # List RPM files
+              find /github/home/.rpmbuild -name \"*.rpm\" -type f
+
+              # Create release body
+              PYVER=\$(cat /tmp/pyver.txt)
+              /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
+
+              echo '| Package | Version |' > /tmp/tbl.md
+              echo '|---------|---------|' >> /tmp/tbl.md
+              grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | grep -v '@ file://' | grep '==' | while read line; do
+                echo \"| \$line |\" | sed 's/==/|/g' >> /tmp/tbl.md
+              done
+
+              {
+                echo \"# Miniforge3 RPM \${MINIFORGE_VERSION}\"
+                echo \"\"
+                echo \"## Environment\"
+                echo \"- Miniforge: \${MINIFORGE_VERSION}\"
+                echo \"- Python: \$PYVER\"
+                echo \"- Installation: /usr/local/miniforge3\"
+                echo \"- Platform: CentOS 7 (glibc 2.17)\"
+                echo \"\"
+                echo \"## Installed Packages\"
+                echo \"\"
+                cat /tmp/tbl.md
+                echo \"\"
+                echo \"## Installation\"
+                echo '\`\`\`'\"
+                echo \"sudo rpm -ivh miniforge3-\${RPM_VERSION}-1.el7.x86_64.rpm\"
+                echo '\`\`\`'\"
+                echo \"\"
+                echo '\`\`\`'\"
+                echo \"sudo yum localinstall miniforge3-\${RPM_VERSION}-1.el7.x86_64.rpm\"
+                echo '\`\`\`'\"
+              } > /tmp/release_body.txt
+
+              # Upload to Release
+              cd /github/home/.rpmbuild
+              echo \"Upload files:\"
+              ls -la RPMS/**/*.rpm SOURCES/*.tar.gz
+            "
 
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
