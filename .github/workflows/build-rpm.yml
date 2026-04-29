@@ -57,7 +57,7 @@ jobs:
               /usr/local/miniforge3/bin/pip install --prefer-binary -r /miniforge/requirements.txt
 
               # Get Python version
-              PYVER=\$(/usr/local/miniforge3/bin/python -c \"import sys; print(sys.version.split()[0])\")
+              /usr/local/miniforge3/bin/python -c \"import sys; print(sys.version.split()[0])\" > /tmp/pyver.txt
 
               # Prepare RPM build environment
               mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
@@ -80,40 +80,46 @@ jobs:
 
               # Get installed packages via pip freeze
               /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
-
-              # Create table
-              echo '| Package | Version |' > /tmp/tbl.md
-              echo '|---------|---------|' >> /tmp/tbl.md
-              grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | grep -v '@ file://' | grep '==' | while read line; do
-                echo \"| \$line |\" | sed 's/==/|/g' >> /tmp/tbl.md
-              done
-
-              # Build release body
-              {
-                echo \"# Miniforge3 RPM \${MINIFORGE_VERSION}\"
-                echo \"\"
-                echo \"## Environment\"
-                echo \"- Miniforge: \${MINIFORGE_VERSION}\"
-                echo \"- Python: \$PYVER\"
-                echo \"- Installation: /usr/local/miniforge3\"
-                echo \"- Platform: CentOS 7 (glibc 2.17)\"
-                echo \"\"
-                echo \"## Installed Packages\"
-                echo \"\"
-                cat /tmp/tbl.md
-                echo \"\"
-                echo \"## Installation\"
-                echo \"\\\`\\\`\\\`\"
-                echo \"sudo rpm -ivh miniforge3-\${RPM_VERSION}-1.el7.x86_64.rpm\"
-                echo \"\\\`\\\`\\\`\"
-                echo \"\"
-                echo \"\\\`\\\`\\\`\"
-                echo \"sudo yum localinstall miniforge3-\${RPM_VERSION}-1.el7.x86_64.rpm\"
-                echo \"\\\`\\\`\\\`\"
-              } > /tmp/release_body.txt
-
-              cp /tmp/release_body.txt /output/release_body.txt
+              cp /tmp/pip_freeze.txt /output/pip_freeze.txt
+              cp /tmp/pyver.txt /output/pyver.txt
             "
+
+      - name: Create package table
+        run: |
+          echo '| Package | Version |' > /tmp/tbl.md
+          echo '|---------|---------|' >> /tmp/tbl.md
+          grep -v '^#' /tmp/rpmbuild/pip_freeze.txt | grep -v '^$' | grep -v '@ file://' | grep '==' | while read line; do
+            echo "| $line |" | sed 's/==/|/g' >> /tmp/tbl.md
+          done
+
+      - name: Create release body
+        run: |
+          VERSION="${{ inputs.miniforge_version }}"
+          RPM_VERSION=$(echo "$VERSION" | tr '-' '_')
+          PYVER=$(cat /tmp/rpmbuild/pyver.txt)
+
+          {
+            echo "# Miniforge3 RPM ${VERSION}"
+            echo ""
+            echo "## Environment"
+            echo "- Miniforge: ${VERSION}"
+            echo "- Python: ${PYVER}"
+            echo "- Installation: /usr/local/miniforge3"
+            echo "- Platform: CentOS 7 (glibc 2.17)"
+            echo ""
+            echo "## Installed Packages"
+            echo ""
+            cat /tmp/tbl.md
+            echo ""
+            echo "## Installation"
+            echo '```'
+            echo "sudo rpm -ivh miniforge3-${RPM_VERSION}-1.el7.x86_64.rpm"
+            echo '```'
+            echo ""
+            echo '```'
+            echo "sudo yum localinstall miniforge3-${RPM_VERSION}-1.el7.x86_64.rpm"
+            echo '```'
+          } > /tmp/rpmbuild/release_body.txt
 
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
