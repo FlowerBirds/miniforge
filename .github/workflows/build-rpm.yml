@@ -80,13 +80,6 @@ jobs:
         run: |
           find /github/home/.rpmbuild -name "*.rpm" -type f
 
-      - name: Upload RPM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: miniforge3-rpm-${{ inputs.miniforge_version }}
-          path: /github/home/.rpmbuild/RPMS/**/*.rpm
-          retention-days: 5
-
       - name: Create release body
         run: |
           VERSION="${{ inputs.miniforge_version }}"
