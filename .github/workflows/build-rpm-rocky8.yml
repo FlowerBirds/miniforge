@@ -22,7 +22,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed gcc python3-devel
+          dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed
 
       - name: Download Miniforge
         run: |
@@ -41,6 +41,8 @@ jobs:
 
       - name: Install Python dependencies from requirements.txt
         run: |
+          export CC="/usr/local/miniforge3/bin/gcc"
+          export PATH="/usr/local/miniforge3/bin:$PATH"
           /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
           /usr/local/miniforge3/bin/pip install --prefer-binary -r requirements.txt
 
