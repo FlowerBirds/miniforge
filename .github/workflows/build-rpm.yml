@@ -45,11 +45,9 @@ jobs:
           /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
           /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements.txt
 
-      - name: Get Python version and packages info
-        id: python-info
+      - name: Get Python version
         run: |
-          /usr/local/miniforge3/bin/pip freeze | sed 's/==/|/g' > /tmp/packages.txt
-          echo "python_version=$(/usr/local/miniforge3/bin/python --version)" >> $GITHUB_OUTPUT
+          /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > /tmp/pyver.txt
 
       - name: Prepare RPM build environment
         run: |
@@ -89,6 +87,50 @@ jobs:
           path: /github/home/.rpmbuild/RPMS/**/*.rpm
           retention-days: 5
 
+      - name: Create release body
+        run: |
+          VERSION="${{ inputs.miniforge_version }}"
+          RPM_VERSION=$(echo "$VERSION" | tr '-' '_')
+
+          # Get Python version
+          PYVERFILE=/tmp/python_version.txt
+          /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > $PYVERFILE
+          PYVER="$(cat $PYVERFILE)"
+
+          # Get installed packages via pip freeze
+          /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
+
+          # Create table - filter out @ file:// lines and keep only proper packages
+          echo '| Package | Version |' > /tmp/tbl.md
+          echo '|---------|---------|' >> /tmp/tbl.md
+          grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | grep -v '@ file://' | grep '==' | while read line; do
+            echo "| $line |" | sed 's/==/|/g' >> /tmp/tbl.md
+          done
+
+          # Build full release
+          {
+            echo "# Miniforge3 RPM $VERSION"
+            echo ""
+            echo "## Environment"
+            echo "- Miniforge: $VERSION"
+            echo "- Python: $PYVER"
+            echo "- Installation: /usr/local/miniforge3"
+            echo "- Platform: CentOS 7 (glibc 2.17)"
+            echo ""
+            echo "## Installed Packages"
+            echo ""
+            cat /tmp/tbl.md
+            echo ""
+            echo "## Installation"
+            echo '```'
+            echo "sudo rpm -ivh miniforge3-${RPM_VERSION}-1.el7.x86_64.rpm"
+            echo '```'
+            echo ""
+            echo '```'
+            echo "sudo yum localinstall miniforge3-${RPM_VERSION}-1.el7.x86_64.rpm"
+            echo '```'
+          } > /tmp/release_body.txt
+
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
@@ -98,25 +140,4 @@ jobs:
           files: |
             /github/home/.rpmbuild/RPMS/**/*.rpm
             /github/home/.rpmbuild/SOURCES/*.tar.gz
-          body: |
-            Miniforge3 RPM package built from version ${{ inputs.miniforge_version }} for CentOS 7
-
-            ## Environment
-            - **Miniforge:** ${{ inputs.miniforge_version }}
-            - **Python:** ${{ steps.python-info.outputs.python_version }}
-            - **Installation:** `/usr/local/miniforge3`
-
-            ## Installed Packages
-
-            Please check the release artifacts for the package list.
-
-            ## Installation
-
-            ```bash
-            sudo rpm -ivh miniforge3-${{ inputs.miniforge_version }}-1.el7.x86_64.rpm
-            ```
-
-            Or install from local file:
-            ```bash
-            sudo yum localinstall miniforge3-${{ inputs.miniforge_version }}-1.el7.x86_64.rpm
-            ```
+          body_path: /tmp/release_body.txt
