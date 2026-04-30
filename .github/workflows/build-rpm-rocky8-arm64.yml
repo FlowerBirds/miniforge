@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-rpm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     container: rockylinux:8
 
     steps:
