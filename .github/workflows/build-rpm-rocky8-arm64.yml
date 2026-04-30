@@ -17,12 +17,21 @@ jobs:
     container: rockylinux:8
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Install build dependencies
         run: |
           dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed gcc gcc-c++ make
+
+      - name: Cache build dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/dnf
+            /var/cache/yum
+          key: build-deps-rocky8-arm64-${{ hashFiles('.github/workflows/build-rpm-rocky8-arm64.yml') }}
+          retention-days: 30
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Download Miniforge (ARM64)
         run: |
