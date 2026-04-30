@@ -27,7 +27,7 @@ jobs:
           path: |
             /var/cache/dnf
             /var/cache/yum
-          key: build-deps-rocky8-arm64-${{ hashFiles('.github/workflows/build-rpm-rocky8-arm64.yml') }}
+          key: build-deps-rocky8-arm64
           retention-days: 30
 
       - name: Checkout repository
