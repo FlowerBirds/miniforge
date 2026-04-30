@@ -22,7 +22,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed
+          dnf -y install dnf-plugins-core rpm-build rpmdevtools tar gzip wget which sed gcc gcc-c++ make
 
       - name: Download Miniforge (ARM64)
         run: |
@@ -42,13 +42,11 @@ jobs:
       - name: Install Python dependencies from requirements.txt
         run: |
           /usr/local/miniforge3/bin/pip install --upgrade pip setuptools wheel
-          /usr/local/miniforge3/bin/pip install --no-build-isolation -r requirements.txt
+          /usr/local/miniforge3/bin/pip install --prefer-binary -r requirements.txt
 
-      - name: Get Python version and packages info
-        id: python-info
+      - name: Get Python version
         run: |
-          /usr/local/miniforge3/bin/pip freeze | sed 's/==/|/g' > /tmp/packages.txt
-          echo "python_version=$(/usr/local/miniforge3/bin/python --version)" >> $GITHUB_OUTPUT
+          /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > /tmp/pyver.txt
 
       - name: Prepare RPM build environment
         run: |
@@ -88,6 +86,47 @@ jobs:
           path: /github/home/.rpmbuild/RPMS/**/*.rpm
           retention-days: 5
 
+      - name: Get pip freeze
+        run: |
+          /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
+
+      - name: Create package table
+        run: |
+          echo '| Package | Version |' > /tmp/tbl.md
+          echo '|---------|---------|' >> /tmp/tbl.md
+          grep -v '^#' /tmp/pip_freeze.txt | grep -v '^$' | grep -v '@ file://' | grep '==' | while read line; do
+            echo "| $line |" | sed 's/==/|/g' >> /tmp/tbl.md
+          done
+
+      - name: Create release body
+        run: |
+          VERSION="${{ inputs.miniforge_version }}"
+          RPM_VERSION=$(echo "$VERSION" | tr '-' '_')
+          PYVER=$(cat /tmp/pyver.txt)
+
+          {
+            echo "# Miniforge3 RPM (Rocky Linux 8 ARM64) ${VERSION}"
+            echo ""
+            echo "## Environment"
+            echo "- Miniforge: ${VERSION}"
+            echo "- Python: ${PYVER}"
+            echo "- Installation: /usr/local/miniforge3"
+            echo "- Platform: Rocky Linux 8 aarch64"
+            echo ""
+            echo "## Installed Packages"
+            echo ""
+            cat /tmp/tbl.md
+            echo ""
+            echo "## Installation"
+            echo '```'
+            echo "sudo rpm -ivh miniforge3-${RPM_VERSION}-1.el8.aarch64.rpm"
+            echo '```'
+            echo ""
+            echo '```'
+            echo "sudo dnf localinstall miniforge3-${RPM_VERSION}-1.el8.aarch64.rpm"
+            echo '```'
+          } > /tmp/release_body.txt
+
       - name: Upload to Release
         if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
@@ -97,25 +136,4 @@ jobs:
           files: |
             /github/home/.rpmbuild/RPMS/**/*.rpm
             /github/home/.rpmbuild/SOURCES/*.tar.gz
-          body: |
-            Miniforge3 RPM package built from version ${{ inputs.miniforge_version }} for Rocky Linux 8 ARM64
-
-            ## Environment
-            - **Miniforge:** ${{ inputs.miniforge_version }}
-            - **Python:** ${{ steps.python-info.outputs.python_version }}
-            - **Installation:** `/usr/local/miniforge3`
-
-            ## Installed Packages
-
-            Please check the release artifacts for the package list.
-
-            ## Installation
-
-            ```bash
-            sudo rpm -ivh miniforge3-${{ inputs.miniforge_version }}-1.el8.aarch64.rpm
-            ```
-
-            Or install from local file:
-            ```bash
-            sudo dnf localinstall miniforge3-${{ inputs.miniforge_version }}-1.el8.aarch64.rpm
-            ```
+          body_path: /tmp/release_body.txt
