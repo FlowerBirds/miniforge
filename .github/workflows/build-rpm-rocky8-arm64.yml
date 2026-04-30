@@ -48,6 +48,10 @@ jobs:
         run: |
           /usr/local/miniforge3/bin/python -c "import sys; print(sys.version.split()[0])" > /tmp/pyver.txt
 
+      - name: Get glibc version
+        run: |
+          ldd --version | head -1 | sed 's/.*)//' | sed 's/)//' > /tmp/glibc.txt
+
       - name: Prepare RPM build environment
         run: |
           mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
@@ -103,6 +107,7 @@ jobs:
           VERSION="${{ inputs.miniforge_version }}"
           RPM_VERSION=$(echo "$VERSION" | tr '-' '_')
           PYVER=$(cat /tmp/pyver.txt)
+          GLIBC=$(cat /tmp/glibc.txt)
 
           {
             echo "# Miniforge3 RPM (Rocky Linux 8 ARM64) ${VERSION}"
@@ -110,6 +115,7 @@ jobs:
             echo "## Environment"
             echo "- Miniforge: ${VERSION}"
             echo "- Python: ${PYVER}"
+            echo "- glibc: ${GLIBC}"
             echo "- Installation: /usr/local/miniforge3"
             echo "- Platform: Rocky Linux 8 aarch64"
             echo ""

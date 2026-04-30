@@ -50,6 +50,10 @@ jobs:
           PYVER=$(cat /tmp/pyver.txt)
           echo "python_version=$PYVER" >> $GITHUB_OUTPUT
 
+      - name: Get glibc version
+        run: |
+          ldd --version | head -1 | sed 's/.*)//' | sed 's/)//' > /tmp/glibc.txt
+
       - name: Prepare RPM build environment
         run: |
           mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
@@ -103,6 +107,8 @@ jobs:
           echo "=== pip freeze output ==="
           cat /tmp/pip_freeze.txt
 
+          GLIBC="$(cat /tmp/glibc.txt)"
+
           # Create table - filter out @ file:// lines and keep only proper packages
           echo '| Package | Version |' > /tmp/tbl.md
           echo '|---------|---------|' >> /tmp/tbl.md
@@ -117,6 +123,7 @@ jobs:
             echo "## Environment"
             echo "- Miniforge: $VERSION"
             echo "- Python: $PYVER"
+            echo "- glibc: $GLIBC"
             echo "- Installation: /usr/local/miniforge3"
             echo ""
             echo "## Installed Packages"

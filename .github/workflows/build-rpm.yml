@@ -59,6 +59,9 @@ jobs:
               # Get Python version
               /usr/local/miniforge3/bin/python -c \"import sys; print(sys.version.split()[0])\" > /tmp/pyver.txt
 
+              # Get glibc version
+              ldd --version | head -1 | sed 's/.*))//' | sed 's/)//' > /tmp/glibc.txt
+
               # Prepare RPM build environment
               mkdir -p /github/home/.rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
 
@@ -82,6 +85,7 @@ jobs:
               /usr/local/miniforge3/bin/pip freeze > /tmp/pip_freeze.txt
               cp /tmp/pip_freeze.txt /output/pip_freeze.txt
               cp /tmp/pyver.txt /output/pyver.txt
+              cp /tmp/glibc.txt /output/glibc.txt
             "
 
       - name: Create package table
@@ -97,6 +101,7 @@ jobs:
           VERSION="${{ inputs.miniforge_version }}"
           RPM_VERSION=$(echo "$VERSION" | tr '-' '_')
           PYVER=$(cat /tmp/rpmbuild/pyver.txt)
+          GLIBC=$(cat /tmp/rpmbuild/glibc.txt)
 
           {
             echo "# Miniforge3 RPM ${VERSION}"
@@ -104,8 +109,9 @@ jobs:
             echo "## Environment"
             echo "- Miniforge: ${VERSION}"
             echo "- Python: ${PYVER}"
+            echo "- glibc: ${GLIBC}"
             echo "- Installation: /usr/local/miniforge3"
-            echo "- Platform: CentOS 7 (glibc 2.17)"
+            echo "- Platform: CentOS 7 x86_64"
             echo ""
             echo "## Installed Packages"
             echo ""
